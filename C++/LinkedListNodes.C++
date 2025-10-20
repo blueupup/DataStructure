@@ -3,12 +3,12 @@
 #include <sstream>
 #include <string>
 #include <ctime>
+#include <algorithm>
 
 using namespace std;
 
 class JobNode {
 public:
-    // --- Changed char[] to string ---
     string id;
     string description;
     JobNode* next;
@@ -34,7 +34,7 @@ public:
         }
     }
 
-    // --- Updated parameters to const string& ---
+
     void addJobAtFront(const string& id, const string& description) {
         JobNode* newNode = new JobNode(id, description);
         newNode->next = head; // Point new node to the old head
@@ -42,7 +42,7 @@ public:
         size++;
     }
 
-    // --- Updated parameters to const string& ---
+
     void addJobAtEnd(const string& id, const string& description) {
         JobNode* newNode = new JobNode(id, description);
         if (head == nullptr) {
@@ -61,7 +61,6 @@ public:
 
     JobNode* getHead() const { return head; }
 
-    // --- Updated return type from const char* to string ---
     string getJobId(int index) const {
         JobNode* current = head;
         int count = 0;
@@ -73,7 +72,6 @@ public:
         return (current != nullptr) ? current->id : "";
     }
 
-    // --- Updated return type from const char* to string ---
     string getJobDescription(int index) const {
         JobNode* current = head;
         int count = 0;
@@ -88,7 +86,6 @@ public:
 
 class ResumeNode {
 public:
-    // --- Changed char[] to string ---
     string id;
     string description;
     ResumeNode* next;
@@ -176,3 +173,151 @@ public:
         return nullptr;
     }
 };
+
+
+//Load Data
+
+string trim(const string& str) {
+    size_t start = 0;
+    size_t end = str.length();
+    
+    while (start < end && isspace(str[start])) {
+        start++;
+    }
+    
+    while (end > start && isspace(str[end - 1])) {
+        end--;
+    }
+    
+    return str.substr(start, end - start);
+}
+
+string extract_skills(const string& text){
+    string start_marker = "in ";
+    char end_marker = '.';
+
+    string lower_text = text;
+    transform(lower_text.begin(), lower_text.end(), lower_text.begin(), ::tolower);
+
+    size_t start_pos = lower_text.find(start_marker);
+
+    if(start_pos == string::npos) {
+        return "";
+    }
+
+    size_t end_pos = lower_text.find(end_marker, start_pos);
+
+    if(end_pos == string::npos) {
+        return "";
+    }
+
+    start_pos += start_marker.length();
+
+    size_t length = end_pos - start_pos;
+
+    return text.substr(start_pos, length);
+};
+
+bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
+    ifstream file(filename);
+    
+    if (!file.is_open()) {
+        cerr << "Error: Could not open " << filename << endl;
+        return false;
+    }
+    
+    string line;
+    getline(file, line);
+    
+    int jobCounter = 1;
+    int count = 0;
+    
+    cout << "\n--- Loading Jobs ---\n";
+    
+    while (getline(file, line)) {
+        string trimmedLine = trim(line);
+        
+        if (trimmedLine.empty()) {
+            continue;
+        }
+
+        string skills = extract_skills(trimmedLine);
+
+        if (skills.empty()) {
+            cout << "  Warning: No skills found in job description. Skipping line.\n";
+            continue;
+        }
+
+
+        // Auto-generate ID
+        string generatedID = "J" + string(3 - to_string(jobCounter).length(), '0') + to_string(jobCounter);
+
+        
+        // Add to linked list (using your addJobAtEnd method)
+        jobs.addJobAtEnd(generatedID, skills);
+
+        count++;
+        jobCounter++;
+    }
+    
+    file.close();
+    
+    cout << "\n✓ Successfully loaded " << count << " jobs\n";
+    cout << "-------------------\n";
+    
+    return count > 0;
+}
+
+
+bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes) {
+    ifstream file(filename);
+    
+    if (!file.is_open()) {
+        cerr << "Error: Could not open " << filename << endl;
+        return false;
+    }
+    
+    string line;
+    getline(file, line); // Skip header
+    
+    int resumeCounter = 1;
+    int count = 0;
+    
+    cout << "\n--- Loading Resumes ---\n";
+    
+    while (getline(file, line)) {
+        string trimmedLine = trim(line);
+        
+        if (trimmedLine.empty()) {
+            continue; // Skip empty lines
+        }
+
+        string skills = extract_skills(trimmedLine);
+        
+        if (skills.empty()) {
+            cout << "  Warning: No skills found in resume description. Skipping line.\n";
+            continue;
+        }
+
+
+        // Auto-generate ID
+        string generatedID = "R" + string(3 - to_string(resumeCounter).length(), '0') + to_string(resumeCounter);
+        // Creates: R001, R002, R003, etc.
+        
+        // Add to linked list
+        resumes.addResume(generatedID, skills);
+        
+        cout << "  Loaded: " << generatedID << " - " 
+             << trimmedLine.substr(0, 50) << "..." << endl;
+        
+        count++;
+        resumeCounter++;
+    }
+    
+    file.close();
+    
+    cout << "\n✓ Successfully loaded " << count << " resumes\n";
+    cout << "-------------------\n";
+    
+    return count > 0;
+}
