@@ -14,7 +14,10 @@ public:
     JobNode* next;
 
     JobNode(const string& jid, const string& desc)
-        : id(jid), description(desc), next(nullptr) {
+    {
+        id = jid;
+        description = desc;
+        next = nullptr;
     }
 };
 
@@ -37,7 +40,7 @@ public:
 
     void addJobAtFront(const string& id, const string& description) {
         JobNode* newNode = new JobNode(id, description);
-        newNode->next = head; // Point new node to the old head
+        newNode->next = head;
         head = newNode;
         size++;
     }
@@ -90,10 +93,20 @@ public:
     string description;
     ResumeNode* next;
 
-    ResumeNode(const string& rid, const string& desc)
-        : id(rid), description(desc), next(nullptr) {
+    string bestJobId;
+    string bestJobDesc;
+    int bestMatchScore;
 
+    ResumeNode(const string& rid, const string& desc)
+    {
+        id = rid;
+        description = desc;
+        bestJobDesc = "";
+        bestJobId = "";
+        bestMatchScore = 0;
+        next = nullptr;
     }
+
 };
 
 class ResumeLinkedList {
@@ -127,6 +140,8 @@ public:
     }
 
     int getSize() const { return size; }
+
+    ResumeNode* getHead() const { return head; }
 
     string getResumeId(int index) const {
         ResumeNode* current = head;
@@ -253,7 +268,6 @@ bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
         string generatedID = "J" + string(3 - to_string(jobCounter).length(), '0') + to_string(jobCounter);
 
         
-        // Add to linked list (using your addJobAtEnd method)
         jobs.addJobAtEnd(generatedID, skills);
 
         count++;
@@ -278,7 +292,7 @@ bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes) {
     }
     
     string line;
-    getline(file, line); // Skip header
+    getline(file, line);
     
     int resumeCounter = 1;
     int count = 0;
@@ -302,9 +316,7 @@ bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes) {
 
         // Auto-generate ID
         string generatedID = "R" + string(3 - to_string(resumeCounter).length(), '0') + to_string(resumeCounter);
-        // Creates: R001, R002, R003, etc.
         
-        // Add to linked list
         resumes.addResume(generatedID, skills);
         
         cout << "  Loaded: " << generatedID << " - " 
