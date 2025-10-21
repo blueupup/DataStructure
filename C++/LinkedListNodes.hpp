@@ -10,27 +10,77 @@
 
 using namespace std;
 
+// Utility functions (defined first)
+inline string trim(const string& str) {
+    if (str.empty()) return "";
+    size_t start = 0;
+    size_t end = str.size();
+
+    while (start < end && isspace(static_cast<unsigned char>(str[start]))) start++;
+    while (end > start && isspace(static_cast<unsigned char>(str[end - 1]))) end--;
+
+    return (start >= end) ? "" : str.substr(start, end - start);
+}
+
+inline string extract_skills(const string& text) {
+    if (text.empty()) return "";
+
+    const char* start_marker = "in ";
+    const size_t marker_len = 3;
+    const char end_marker = '.';
+
+    // Find "in " case-insensitively
+    size_t start_pos = string::npos;
+    for (size_t i = 0; i <= text.size() - marker_len; i++) {
+        if ((text[i] == 'i' || text[i] == 'I') && 
+            (text[i+1] == 'n' || text[i+1] == 'N') && 
+            text[i+2] == ' ') {
+            start_pos = i;
+            break;
+        }
+    }
+    
+    if (start_pos == string::npos) return "";
+
+    size_t content_start = start_pos + marker_len;
+    size_t end_pos = text.find(end_marker, content_start);
+    
+    if (end_pos == string::npos || end_pos <= content_start) return "";
+    if (content_start >= text.size()) return "";
+    
+    size_t length = end_pos - content_start;
+    if (length > text.size() - content_start) {
+        length = text.size() - content_start;
+    }
+
+    return text.substr(content_start, length);
+}
+
+// Node classes
 class JobNode {
 public:
     string id;
     string description;
+    string skillsOnly;  // Cache extracted skills
     JobNode* next;
 
-    JobNode(const string& jid, const string& desc)
-    {
-        id = jid;
-        description = desc;
-        next = nullptr;
-    }
+    int totalMatches;
+    double totalScore;
+    double averageScore;
+    
+    JobNode(const string& jid, const string& desc, const string& skills)
+        : id(jid), description(desc), skillsOnly(skills), next(nullptr),
+          totalMatches(0), totalScore(0.0), averageScore(0.0) {}
 };
 
 class JobLinkedList {
 private:
     JobNode* head;
+    JobNode* tail;  // Optimize addJobAtEnd
     int size;
 
 public:
-    JobLinkedList() : head(nullptr), size(0) {}
+    JobLinkedList() : head(nullptr), tail(nullptr), size(0) {}
 
     ~JobLinkedList() {
         while (head != nullptr) {
@@ -40,53 +90,81 @@ public:
         }
     }
 
-
     void addJobAtFront(const string& id, const string& description) {
-        JobNode* newNode = new JobNode(id, description);
+        string skills = extract_skills(description);
+        JobNode* newNode = new JobNode(id, description, skills);
         newNode->next = head;
         head = newNode;
+        if (tail == nullptr) tail = newNode;
         size++;
     }
 
-
     void addJobAtEnd(const string& id, const string& description) {
-        JobNode* newNode = new JobNode(id, description);
+        string skills = extract_skills(description);
+        JobNode* newNode = new JobNode(id, description, skills);
         if (head == nullptr) {
-            head = newNode;
+            head = tail = newNode;
         } else {
-            JobNode* current = head;
-            while (current->next != nullptr) {
-                current = current->next;
-            }
-            current->next = newNode;
+            tail->next = newNode;
+            tail = newNode;
         }
         size++;
     }
 
     int getSize() const { return size; }
-
     JobNode* getHead() const { return head; }
 
     string getJobId(int index) const {
         JobNode* current = head;
-        int count = 0;
-        while (current != nullptr && count < index) {
+        for (int i = 0; i < index && current != nullptr; i++) {
             current = current->next;
-            count++;
         }
-        // Return ID or an empty string if not found
         return (current != nullptr) ? current->id : "";
     }
 
     string getJobDescription(int index) const {
         JobNode* current = head;
-        int count = 0;
-        while (current != nullptr && count < index) {
+        for (int i = 0; i < index && current != nullptr; i++) {
             current = current->next;
-            count++;
         }
-        // Return description or an empty string if not found
         return (current != nullptr) ? current->description : "";
+    }
+
+    void displayTop10ByScore() const {
+        if (size == 0) return;
+        
+        // Use dynamic allocation based on actual size
+        JobNode** jobArray = new JobNode*[size];
+        int count = 0;
+
+        for (JobNode* job = head; job != nullptr; job = job->next)
+            jobArray[count++] = job;
+
+        // Selection Sort by averageScore (descending)
+        for (int i = 0; i < count - 1; i++) {
+            int maxIdx = i;
+            for (int j = i + 1; j < count; j++) {
+                if (jobArray[j]->averageScore > jobArray[maxIdx]->averageScore)
+                    maxIdx = j;
+            }
+            if (maxIdx != i) {
+                JobNode* temp = jobArray[i];
+                jobArray[i] = jobArray[maxIdx];
+                jobArray[maxIdx] = temp;
+            }
+        }
+
+        cout << "\nTop 10 Jobs by Average Match Score\n";
+        cout << "--------------------------------------------\n";
+        int limit = (count < 10) ? count : 10;
+        for (int i = 0; i < limit; i++) {
+            cout << i + 1 << ". " << jobArray[i]->id
+                 << " | Avg Score: " << jobArray[i]->averageScore
+                 << " | Matches: " << jobArray[i]->totalMatches << "\n";
+        }
+        cout << "--------------------------------------------\n";
+        
+        delete[] jobArray;
     }
 };
 
@@ -94,31 +172,26 @@ class ResumeNode {
 public:
     string id;
     string description;
+    string skillsOnly;  // Cache extracted skills
     ResumeNode* next;
 
     string bestJobId;
     string bestJobDesc;
     int bestMatchScore;
 
-    ResumeNode(const string& rid, const string& desc)
-    {
-        id = rid;
-        description = desc;
-        bestJobDesc = "";
-        bestJobId = "";
-        bestMatchScore = 0;
-        next = nullptr;
-    }
-
+    ResumeNode(const string& rid, const string& desc, const string& skills)
+        : id(rid), description(desc), skillsOnly(skills), next(nullptr),
+          bestJobId(""), bestJobDesc(""), bestMatchScore(0) {}
 };
 
 class ResumeLinkedList {
 private:
     ResumeNode* head;
+    ResumeNode* tail;  // Optimize addResume
     int size;
 
 public:
-    ResumeLinkedList() : head(nullptr), size(0) {}
+    ResumeLinkedList() : head(nullptr), tail(nullptr), size(0) {}
 
     ~ResumeLinkedList() {
         while (head != nullptr) {
@@ -129,43 +202,35 @@ public:
     }
 
     void addResume(const string& id, const string& description) {
-        ResumeNode* newNode = new ResumeNode(id, description);
+        string skills = extract_skills(description);
+        ResumeNode* newNode = new ResumeNode(id, description, skills);
         if (head == nullptr) {
-            head = newNode;
+            head = tail = newNode;
         } else {
-            ResumeNode* current = head;
-            while (current->next != nullptr) {
-                current = current->next;
-            }
-            current->next = newNode;
+            tail->next = newNode;
+            tail = newNode;
         }
         size++;
     }
 
     int getSize() const { return size; }
-
     ResumeNode* getHead() const { return head; }
 
     string getResumeId(int index) const {
         ResumeNode* current = head;
-        int count = 0;
-        while (current != nullptr && count < index) {
+        for (int i = 0; i < index && current != nullptr; i++) {
             current = current->next;
-            count++;
         }
         return (current != nullptr) ? current->id : "";
     }
 
     string getResumeDescription(int index) const {
         ResumeNode* current = head;
-        int count = 0;
-        while (current != nullptr && count < index) {
+        for (int i = 0; i < index && current != nullptr; i++) {
             current = current->next;
-            count++;
         }
         return (current != nullptr) ? current->description : "";
     }
-
 
     void displayResumes() const {
         ResumeNode* current = head;
@@ -181,65 +246,14 @@ public:
     }
 
     ResumeNode* searchById(const string& searchId) const {
-        ResumeNode* current = head;
-        while (current != nullptr) {
-            if (current->id == searchId) {
-                return current;
-            }
-            current = current->next;
+        for (ResumeNode* current = head; current != nullptr; current = current->next) {
+            if (current->id == searchId) return current;
         }
         return nullptr;
     }
 };
 
-
-//Load Data
-
-inline string trim(const string& str) {
-    if (str.empty()) return "";
-    size_t start = 0;
-    size_t end = str.size();
-
-    while (start < end && isspace(static_cast<unsigned char>(str[start]))) start++;
-    while (end > start && isspace(static_cast<unsigned char>(str[end - 1]))) end--;
-
-    if (start >= end) return "";
-    return str.substr(start, end - start);
-}
-
-inline string extract_skills(const string& text) {
-    try {
-        if (text.empty()) return "";
-
-        string start_marker = "in ";
-        char end_marker = '.';
-
-        string lower_text = text;
-        transform(lower_text.begin(), lower_text.end(), lower_text.begin(), ::tolower);
-
-        size_t start_pos = lower_text.find(start_marker);
-        if (start_pos == string::npos) return "";
-
-        size_t end_pos = lower_text.find(end_marker, start_pos + start_marker.size());
-        if (end_pos == string::npos || end_pos <= start_pos) return "";
-
-        start_pos += start_marker.length();
-
-        // Sanity checks
-        if (start_pos >= text.size()) return "";
-        size_t length = min(end_pos - start_pos, text.size() - start_pos);
-
-        return text.substr(start_pos, length);
-    }
-    catch (const exception& e) {
-        cerr << "extract_skills() failed: " << e.what()
-             << " | text: " << text.substr(0, min((size_t)100, text.size())) << "...\n";
-        return "";
-    }
-}
-
-
-
+// Load Data Functions
 inline bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
     ifstream file(filename);
     
@@ -249,7 +263,7 @@ inline bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
     }
     
     string line;
-    getline(file, line);
+    getline(file, line);  // Skip header
     
     int jobCounter = 1;
     int count = 0;
@@ -258,27 +272,19 @@ inline bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
     
     while (getline(file, line)) {
         string trimmedLine = trim(line);
-        
-        if (trimmedLine.empty()) {
-            continue;
-        }
+        if (trimmedLine.empty()) continue;
 
         string skills = extract_skills(trimmedLine);
-
         if (skills.empty()) {
             cout << "  Warning: No skills found in job description. Skipping line.\n";
             continue;
         }
 
-
-        // Auto-generate ID
+        // Generate ID
         string generatedID = "J";
-        int numDigits = to_string(jobCounter).length();
-        if (numDigits < 3) {
-            generatedID += string(3 - numDigits, '0');  // Only pad if needed
-        }
+        if (jobCounter < 10) generatedID += "00";
+        else if (jobCounter < 100) generatedID += "0";
         generatedID += to_string(jobCounter);
-
         
         jobs.addJobAtEnd(generatedID, trimmedLine);
 
@@ -288,12 +294,11 @@ inline bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
     
     file.close();
     
-    cout << "\n✓ Successfully loaded " << count << " jobs\n";
+    cout << "Successfully loaded " << count << " jobs\n";
     cout << "-------------------\n";
     
     return count > 0;
 }
-
 
 inline bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes) {
     ifstream file(filename);
@@ -304,7 +309,7 @@ inline bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes
     }
     
     string line;
-    getline(file, line);
+    getline(file, line);  // Skip header
     
     int resumeCounter = 1;
     int count = 0;
@@ -313,25 +318,18 @@ inline bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes
     
     while (getline(file, line)) {
         string trimmedLine = trim(line);
-        
-        if (trimmedLine.empty()) {
-            continue; // Skip empty lines
-        }
+        if (trimmedLine.empty()) continue;
 
         string skills = extract_skills(trimmedLine);
-        
         if (skills.empty()) {
             cout << "  Warning: No skills found in resume description. Skipping line.\n";
             continue;
         }
 
-
-        // Auto-generate ID
-        string generatedID = "J";
-        int numDigits = to_string(resumeCounter).length();
-        if (numDigits < 3) {
-            generatedID += string(3 - numDigits, '0');  // Only pad if needed
-        }
+        // Generate ID
+        string generatedID = "R";
+        if (resumeCounter < 10) generatedID += "00";
+        else if (resumeCounter < 100) generatedID += "0";
         generatedID += to_string(resumeCounter);
         
         resumes.addResume(generatedID, trimmedLine);
@@ -342,7 +340,7 @@ inline bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes
     
     file.close();
     
-    cout << "\n✓ Successfully loaded " << count << " resumes\n";
+    cout << "Successfully loaded " << count << " resumes\n";
     cout << "-------------------\n";
     
     return count > 0;

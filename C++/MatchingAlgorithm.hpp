@@ -10,167 +10,258 @@
 #include "LinkedListNodes.hpp"
 using namespace std;
 
-class KeywordAlgorithm{
-public:
-    string toLowerString(const string& str) {
-        string lower = str;
-        transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        return lower;
+// Skill lookup structure for O(1) checks
+struct SkillSet {
+    static const int MAX_SKILLS = 40;
+    const char* skills[MAX_SKILLS];
+    int count;
+    
+    SkillSet(const char* arr[], int n) : count(n) {
+        for (int i = 0; i < n; i++) {
+            skills[i] = arr[i];
+        }
+    }
+};
+
+class KeywordAlgorithm {
+private:
+    static const int NUM_SKILLS = 35;
+    const char* skillsList[NUM_SKILLS] = {
+        "python", "java", "javascript", "c++", "sql", "excel", "power bi", 
+        "tableau", "pandas", "machine learning", "deep learning", "nlp", 
+        "statistics", "data cleaning", "reporting", "tensorflow", "keras", 
+        "mlops", "computer vision", "spring boot", "rest apis", "docker", 
+        "git", "system design", "agile", "data analyst", "data scientist", 
+        "software engineer", "ml engineer", "developer", "engineer",
+        "experience", "professional", "skilled"
+    };
+
+    void calculateJobStats(JobLinkedList& jobs, const ResumeLinkedList& resumes) {
+        for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+            job->totalMatches = 0;
+            job->totalScore = 0.0;
+        }
+
+        for (ResumeNode* res = resumes.getHead(); res != nullptr; res = res->next) {
+            if (!res->bestJobId.empty()) {
+                for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+                    if (job->id == res->bestJobId) {
+                        job->totalMatches++;
+                        job->totalScore += res->bestMatchScore;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+            job->averageScore = (job->totalMatches > 0) ? 
+                (job->totalScore / job->totalMatches) : 0.0;
+        }
     }
 
+    // Optimized string search using simple character comparison
+    bool findSubstring(const char* text, int textLen, const char* pattern, int patternLen) const {
+        if (patternLen > textLen) return false;
+        
+        for (int i = 0; i <= textLen - patternLen; i++) {
+            bool match = true;
+            for (int j = 0; j < patternLen; j++) {
+                char c1 = text[i + j];
+                char c2 = pattern[j];
+                // Case-insensitive comparison
+                if (c1 >= 'A' && c1 <= 'Z') c1 += 32;
+                if (c2 >= 'A' && c2 <= 'Z') c2 += 32;
+                if (c1 != c2) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
 
-    int KeywordMatching(const string&resumeDesc, const string&jobsDesc){
-
-        string resumeLower = toLowerString(resumeDesc);
-        string jobsLower = toLowerString(jobsDesc);
-
-
-        string skills[] = {"python", "java", "javascript", "c++","sql", "excel", "power bi", "tableau", "pandas","machine learning", "deep learning", "nlp", "statistics", "data cleaning", "reporting","tensorflow", "keras", "mlops", "computer vision","spring boot", "rest apis", "docker", "git","system design", "agile","data analyst", "data scientist", "software engineer","ml engineer", "developer", "engineer","experience", "professional", "skilled"};
+public:
+    int KeywordMatching(const string& resumeDesc, const string& jobsDesc) {
+        const char* resume = resumeDesc.c_str();
+        const char* job = jobsDesc.c_str();
+        int resumeLen = resumeDesc.length();
+        int jobLen = jobsDesc.length();
 
         int score = 0;
-        for (const string& skill : skills) {
-            if (resumeLower.find(skill) != string::npos &&
-                jobsLower.find(skill) != string::npos) {
+        for (int i = 0; i < NUM_SKILLS; i++) {
+            int skillLen = strlen(skillsList[i]);
+            if (findSubstring(resume, resumeLen, skillsList[i], skillLen) &&
+                findSubstring(job, jobLen, skillsList[i], skillLen)) {
                 score++;
             }
         }
 
         return score;
-
     }
 
-    void performMatching(const ResumeLinkedList& resumes, const JobLinkedList& jobs){
+    void performMatching(ResumeLinkedList& resumes, JobLinkedList& jobs) {
         clock_t start = clock();
 
-        ResumeNode* Resumecurrent = resumes.getHead();
-
-        while(Resumecurrent != nullptr){
+        for (ResumeNode* resume = resumes.getHead(); resume != nullptr; resume = resume->next) {
             int maxScore = 0;
-            string bestJobDesc1 = "";
-            string bestJobId1 = "";
+            JobNode* bestJob = nullptr;
 
-            string resumeDesc = Resumecurrent ->description;
-            JobNode* currentJob = jobs.getHead();
+            for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+                int score = KeywordMatching(resume->skillsOnly, job->skillsOnly);
 
-            while(currentJob != nullptr){
-                string jobDesc = currentJob ->description;
-
-                int score = KeywordMatching(resumeDesc, jobDesc);
-
-                if(score >maxScore){
+                if (score > maxScore) {
                     maxScore = score;
-                    bestJobDesc1 = currentJob ->description;
-                    bestJobId1 = currentJob -> id;
+                    bestJob = job;
                 }
-
-                currentJob = currentJob ->next;
             }
 
-            Resumecurrent->bestJobDesc = bestJobDesc1;
-            Resumecurrent->bestJobId = bestJobId1;
-            Resumecurrent -> bestMatchScore = maxScore;
-
-            Resumecurrent = Resumecurrent->next;
+            if (bestJob != nullptr) {
+                resume->bestJobId = bestJob->id;
+                resume->bestJobDesc = bestJob->description;
+                resume->bestMatchScore = maxScore;
+            }
         }
+        
+        calculateJobStats(jobs, resumes);
 
         clock_t end = clock();
         double timeTaken = double(end - start) / CLOCKS_PER_SEC;
         cout << "Matching completed in " << timeTaken << " seconds.\n";
     }
-
 };
 
 class WeightedAlgorithm {
-public:
+private:
+    static const int NUM_CRITICAL = 6;
+    static const int NUM_CORE = 10;
+    static const int NUM_SOFT = 7;
 
-    string toLowerString(const string& str) {
-        string lower = str;
-        transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        return lower;
+    const char* criticalSkills[NUM_CRITICAL] = {
+        "machine learning", "deep learning", "computer vision", 
+        "mlops", "tensorflow", "keras"
+    };
+    
+    const char* coreSkills[NUM_CORE] = {
+        "python", "java", "sql", "nlp", "spring boot",
+        "docker", "system design", "rest apis", "javascript", "c++"
+    };
+    
+    const char* softSkills[NUM_SOFT] = {
+        "pandas", "excel", "power bi", "tableau", 
+        "git", "agile", "statistics"
+    };
+
+    void calculateJobStats(JobLinkedList& jobs, const ResumeLinkedList& resumes) {
+        for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+            job->totalMatches = 0;
+            job->totalScore = 0.0;
+        }
+
+        for (ResumeNode* res = resumes.getHead(); res != nullptr; res = res->next) {
+            if (!res->bestJobId.empty()) {
+                for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+                    if (job->id == res->bestJobId) {
+                        job->totalMatches++;
+                        job->totalScore += res->bestMatchScore;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+            job->averageScore = (job->totalMatches > 0) ? 
+                (job->totalScore / job->totalMatches) : 0.0;
+        }
     }
 
-    
-    int WeightedMatching(const string&resumedsc, const string&jobsdsc){
-        //In-Demand ML skills
-        string CriticalSkills[] = {"machine learning", "deep learning", "computer vision", "mlops","tensorflow", "keras"};
-        //Basic Skills
-        string CoreSkills [] = {"python","java","sql","nlp","spring boot","docker","system design","rest apis","javascript","c++"}; 
-        //Soft Skills
-        string SoftSkills[] = {"pandas","excel","power bi","tableau","git","agile","statistics"};
+    bool findSubstring(const char* text, int textLen, const char* pattern, int patternLen) const {
+        if (patternLen > textLen) return false;
+        
+        for (int i = 0; i <= textLen - patternLen; i++) {
+            bool match = true;
+            for (int j = 0; j < patternLen; j++) {
+                char c1 = text[i + j];
+                char c2 = pattern[j];
+                if (c1 >= 'A' && c1 <= 'Z') c1 += 32;
+                if (c2 >= 'A' && c2 <= 'Z') c2 += 32;
+                if (c1 != c2) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
 
-        int score = 0;
-        int critical = 0;
-        int core = 0;
-        int soft = 0;
+public:
+    int WeightedMatching(const string& resumedsc, const string& jobsdsc) {
+        const char* resume = resumedsc.c_str();
+        const char* job = jobsdsc.c_str();
+        int resumeLen = resumedsc.length();
+        int jobLen = jobsdsc.length();
 
-        string resumeLower = toLowerString(resumedsc);
-        string jobsLower = toLowerString(jobsdsc);
-        for (const string& skill : CriticalSkills) {
-            if (resumeLower.find(skill) != string::npos &&
-                jobsLower.find(skill) != string::npos) {
+        int critical = 0, core = 0, soft = 0;
+
+        for (int i = 0; i < NUM_CRITICAL; i++) {
+            int len = strlen(criticalSkills[i]);
+            if (findSubstring(resume, resumeLen, criticalSkills[i], len) &&
+                findSubstring(job, jobLen, criticalSkills[i], len)) {
                 critical++;
             }
         }
 
-        for (const string& skill : CoreSkills) {
-            if (resumeLower.find(skill) != string::npos &&
-                jobsLower.find(skill) != string::npos) {
+        for (int i = 0; i < NUM_CORE; i++) {
+            int len = strlen(coreSkills[i]);
+            if (findSubstring(resume, resumeLen, coreSkills[i], len) &&
+                findSubstring(job, jobLen, coreSkills[i], len)) {
                 core++;
             }
         }
 
-        for (const string& skill : SoftSkills) {
-            if (resumeLower.find(skill) != string::npos &&
-                jobsLower.find(skill) != string::npos) {
+        for (int i = 0; i < NUM_SOFT; i++) {
+            int len = strlen(softSkills[i]);
+            if (findSubstring(resume, resumeLen, softSkills[i], len) &&
+                findSubstring(job, jobLen, softSkills[i], len)) {
                 soft++;
             }
         }
 
-        score = (critical * 3) + (core * 2) + (soft * 1);
-        return score;
+        return (critical * 3) + (core * 2) + soft;
     }
 
-    void performWeightedMatching(const ResumeLinkedList& resumes, const JobLinkedList& jobs){
+    void performWeightedMatching(ResumeLinkedList& resumes, JobLinkedList& jobs) {
         clock_t start = clock();
 
-        ResumeNode* Resumecurrent = resumes.getHead();
-
-        while(Resumecurrent != nullptr){
+        for (ResumeNode* resume = resumes.getHead(); resume != nullptr; resume = resume->next) {
             int maxScore = 0;
-            string bestJobDesc1 = "";
-            string bestJobId1 = "";
+            JobNode* bestJob = nullptr;
 
-            string resumeDesc = Resumecurrent ->description;
-            JobNode* currentJob = jobs.getHead();
+            for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
+                int score = WeightedMatching(resume->skillsOnly, job->skillsOnly);
 
-            while(currentJob != nullptr){
-                string jobDesc = currentJob ->description;
-
-                int score = WeightedMatching(resumeDesc, jobDesc);
-
-                if(score >maxScore){
+                if (score > maxScore) {
                     maxScore = score;
-                    bestJobDesc1 = currentJob ->description;
-                    bestJobId1 = currentJob -> id;
+                    bestJob = job;
                 }
-
-                currentJob = currentJob ->next;
             }
 
-            Resumecurrent->bestJobDesc = bestJobDesc1;
-            Resumecurrent->bestJobId = bestJobId1;
-            Resumecurrent -> bestMatchScore = maxScore;
-
-            Resumecurrent = Resumecurrent->next;
+            if (bestJob != nullptr) {
+                resume->bestJobId = bestJob->id;
+                resume->bestJobDesc = bestJob->description;
+                resume->bestMatchScore = maxScore;
+            }
         }
+        
+        calculateJobStats(jobs, resumes);
 
         clock_t end = clock();
         double timeTaken = double(end - start) / CLOCKS_PER_SEC;
         cout << "Weighted Matching completed in " << timeTaken << " seconds.\n";
     }
-
-
-    
 };
 
 #endif
