@@ -10,7 +10,6 @@
 
 using namespace std;
 
-// Utility functions (defined first)
 inline string trim(const string& str) {
     if (str.empty()) return "";
     size_t start = 0;
@@ -29,7 +28,6 @@ inline string extract_skills(const string& text) {
     const size_t marker_len = 3;
     const char end_marker = '.';
 
-    // Find "in " case-insensitively
     size_t start_pos = string::npos;
     for (size_t i = 0; i <= text.size() - marker_len; i++) {
         if ((text[i] == 'i' || text[i] == 'I') && 
@@ -61,7 +59,10 @@ class JobNode {
 public:
     string id;
     string description;
-    string skillsOnly;  // Cache extracted skills
+    int skills[33];
+    int criticalSkills[6];
+    int coreSkills[10];
+    int softSkills[7];
     JobNode* next;
 
     int totalMatches;
@@ -69,14 +70,14 @@ public:
     double averageScore;
     
     JobNode(const string& jid, const string& desc, const string& skills)
-        : id(jid), description(desc), skillsOnly(skills), next(nullptr),
+        : id(jid), description(desc), next(nullptr),
           totalMatches(0), totalScore(0.0), averageScore(0.0) {}
 };
 
 class JobLinkedList {
 private:
     JobNode* head;
-    JobNode* tail;  // Optimize addJobAtEnd
+    JobNode* tail;
     int size;
 
 public:
@@ -172,7 +173,10 @@ class ResumeNode {
 public:
     string id;
     string description;
-    string skillsOnly;  // Cache extracted skills
+    int skills[33];
+    int criticalSkills[6];
+    int coreSkills[10];
+    int softSkills[7];
     ResumeNode* next;
 
     string bestJobId;
@@ -180,14 +184,14 @@ public:
     int bestMatchScore;
 
     ResumeNode(const string& rid, const string& desc, const string& skills)
-        : id(rid), description(desc), skillsOnly(skills), next(nullptr),
+        : id(rid), description(desc), next(nullptr),
           bestJobId(""), bestJobDesc(""), bestMatchScore(0) {}
 };
 
 class ResumeLinkedList {
 private:
     ResumeNode* head;
-    ResumeNode* tail;  // Optimize addResume
+    ResumeNode* tail;
     int size;
 
 public:
@@ -263,7 +267,7 @@ inline bool loadJobsFromCSV(const string& filename, JobLinkedList& jobs) {
     }
     
     string line;
-    getline(file, line);  // Skip header
+    getline(file, line);
     
     int jobCounter = 1;
     int count = 0;
@@ -309,7 +313,7 @@ inline bool loadResumesFromCSV(const string& filename, ResumeLinkedList& resumes
     }
     
     string line;
-    getline(file, line);  // Skip header
+    getline(file, line);
     
     int resumeCounter = 1;
     int count = 0;
