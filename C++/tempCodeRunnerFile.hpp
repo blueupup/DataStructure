@@ -164,33 +164,40 @@ private:
 
     inline double WeightedSkillMatch(const ResumeNode* r, const JobNode* j) {
         double score = 0.0;
+        double resumePossible = 0.0;
         double jobPossible = 0.0;
 
+        // Critical Skills (3 points)
         for (int i = 0; i < CRITICAL_COUNT; ++i) {
-            if (j->criticalSkills[i]) {
-                jobPossible += 3;
-                if (r->criticalSkills[i]) score += 3;
-            }
+            if (r->criticalSkills[i]) resumePossible += 3;
+            if (j->criticalSkills[i]) jobPossible += 3;
+            if (r->criticalSkills[i] && j->criticalSkills[i]) score += 3;
         }
 
+        // Core Skills (2 points)
         for (int i = 0; i < CORE_COUNT; ++i) {
-            if (j->coreSkills[i]) {
-                jobPossible += 2;
-                if (r->coreSkills[i]) score += 2;
-            }
+            if (r->coreSkills[i]) resumePossible += 2;
+            if (j->coreSkills[i]) jobPossible += 2;
+            if (r->coreSkills[i] && j->coreSkills[i]) score += 2;
         }
 
+        // Soft Skills (1 point)
         for (int i = 0; i < SOFT_COUNT; ++i) {
-            if (j->softSkills[i]) {
-                jobPossible += 1;
-                if (r->softSkills[i]) score += 1;
-            }
+            if (r->softSkills[i]) resumePossible += 1;
+            if (j->softSkills[i]) jobPossible += 1;
+            if (r->softSkills[i] && j->softSkills[i]) score += 1;
         }
 
-        if (jobPossible < 5.0) return 0.0;
-        
-        return (score / jobPossible) * 10.0;  // Simple linear scale
+        if (resumePossible == 0.0 || jobPossible == 0.0)
+            return 0.0;
+
+        // Average normalization between resume & job
+        double ratio = (jobPossible > 0) ? (score / jobPossible) : 0.0;
+        double normalized = ratio * 10.0;
+        // if (normalized > 10.0) normalized = 10.0;
+        return normalized;
     }
+
 
     void calculateJobStats(JobLinkedList& jobs, const ResumeLinkedList& resumes) {
         for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
@@ -259,5 +266,3 @@ public:
         cout << "Balanced Weighted Matching completed in " << timeTaken << " seconds.\n";
     }
 };
-
-#endif

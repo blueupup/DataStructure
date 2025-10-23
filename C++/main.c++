@@ -38,7 +38,10 @@ int main() {
         cout << "1. Perform Keyword Matching\n";
         cout << "2. Perform Weighted Matching\n";
         cout << "3. Display Top 10 Jobs by Average Match Score\n";
-        cout << "4. Exit\n";
+        cout << "4. Search Job By ID\n";
+        cout << "5. Search Resume By ID\n";
+
+        cout << "6. Exit\n";
         cout << "Enter your choice: ";
         cin >> choice;
         
@@ -50,16 +53,52 @@ int main() {
                 weightedAlg.performWeightedMatching(resumes, jobs);
                 break;
             case 3:
-                jobs.displayTop10ByScore();
+                cout << "Please select sorting criteria:\n";
+                cout << "1. By Average Match Score\n";
+                cout << "2. By Total Matches\n";
+                int sortChoice;
+                cin >> sortChoice;
+                if (sortChoice == 1) {
+                    jobs.displayTop10ByScore();
+                } else if (sortChoice == 2) {
+                    jobs.displayTop10ByMatches();
+                } else {
+                    cout << "Invalid sorting choice." << endl;
+                }
                 break;
-            case 4:
+            case 4: {
+                string jobId;
+                cout << "Enter Job ID to search: ";
+                cin >> jobId;
+                jobs.searchById(jobId);
+                cout << "Total Matches for Job " << jobId << ": " << endl;
+                cout << "Average Match Score: " << endl;
+                break;
+            }
+            case 5: {
+                string resumeId;
+                cout << "Enter Resume ID to search: ";
+                cin >> resumeId;
+                ResumeNode* res = resumes.searchById(resumeId);
+                if (res) {
+                    cout << "\n*** RESUME FOUND ***" << endl;
+                    cout << "Resume ID: " << res->id << endl;
+                    cout << "\nFull Text:\n" << res->description << endl;
+                    cout << "Best Matched Job ID: " << res->bestJobId << endl;
+                    cout << "Best Matched Job Description: " << res->bestJobDesc << endl;
+                } else {
+                    cout << "\n*** RESUME NOT FOUND ***" << endl;
+                }
+                break;
+            }
+            case 6:
                 cout << "Exiting program. Goodbye!" << endl;
                 break;
             default:
                 cout << "Invalid choice. Please try again." << endl;
         }
         
-    } while (choice != 4);
+    } while (choice != 6);
     
     return 0;
 }
