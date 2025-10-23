@@ -206,9 +206,7 @@ private:
 
             job->totalMatches = totalMatches;
             job->totalScore = totalScore;
-            job->averageScore = (totalMatches > 0)
-                                ? (totalScore / totalMatches)
-                                : 0.0;
+            job->averageScore = (totalMatches > 0) ? (totalScore / totalMatches) : 0.0;
         }
     }
 
