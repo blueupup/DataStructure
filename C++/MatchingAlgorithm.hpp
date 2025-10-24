@@ -4,6 +4,7 @@
 #include <iostream>
 #include <ctime>
 #include <cstring> // for memset, strstr
+#include <cmath>   // for pow
 #include "LinkedListNodes.hpp"
 using namespace std;
 
@@ -109,6 +110,8 @@ public:
 
 class WeightedAlgorithm {
 private:
+    bool strictMode = true;
+    double strictThreshold = 4.0;
     static const int CRITICAL_COUNT = 6;
     static const int CORE_COUNT = 10;
     static const int SOFT_COUNT = 7;
@@ -123,6 +126,7 @@ private:
         "pandas", "excel", "power bi", "tableau", "git", "agile", "statistics"
     };
 
+
     inline void toLowerInPlace(string& s) {
         for (size_t i = 0; i < s.size(); ++i)
             s[i] = tolower(s[i]);
@@ -132,9 +136,6 @@ private:
         return strstr(text.c_str(), word) != nullptr;
     }
 
-    // ===========================================================
-    // PREPROCESSING
-    // ===========================================================
     void preprocessResumeSkills(ResumeLinkedList& resumes) {
         for (ResumeNode* r = resumes.getHead(); r != nullptr; r = r->next) {
             toLowerInPlace(r->description);
@@ -161,46 +162,48 @@ private:
         }
     }
 
-    // ===========================================================
-    // MATCHING (integer comparison only)
-    // ===========================================================
     inline double WeightedSkillMatch(const ResumeNode* r, const JobNode* j) {
-        int intersection = 0;
-        int unionCount = 0;
+        double score = 0.0;
+        double jobPossible = 0.0;
 
         for (int i = 0; i < CRITICAL_COUNT; ++i) {
-            if (r->criticalSkills[i] | j->criticalSkills[i]) unionCount += 3; // weighted union
-            if (r->criticalSkills[i] & j->criticalSkills[i]) intersection += 3;
-        }
-        for (int i = 0; i < CORE_COUNT; ++i) {
-            if (r->coreSkills[i] | j->coreSkills[i]) unionCount += 2;
-            if (r->coreSkills[i] & j->coreSkills[i]) intersection += 2;
-        }
-        for (int i = 0; i < SOFT_COUNT; ++i) {
-            if (r->softSkills[i] | j->softSkills[i]) unionCount += 1;
-            if (r->softSkills[i] & j->softSkills[i]) intersection += 1;
+            if (j->criticalSkills[i]) {
+                jobPossible += 3;
+                if (r->criticalSkills[i]) score += 3;
+            }
         }
 
-        if (unionCount == 0) return 0.0;
-        double normalized = (intersection / (double)unionCount) * 10.0;
-        return normalized;
+        for (int i = 0; i < CORE_COUNT; ++i) {
+            if (j->coreSkills[i]) {
+                jobPossible += 2;
+                if (r->coreSkills[i]) score += 2;
+            }
+        }
+
+        for (int i = 0; i < SOFT_COUNT; ++i) {
+            if (j->softSkills[i]) {
+                jobPossible += 1;
+                if (r->softSkills[i]) score += 1;
+            }
+        }
+
+        if (jobPossible < 5.0) return 0.0;
+        
+        return (score / jobPossible) * 10.0;  // Simple linear scale
     }
 
-
-
-    // ===========================================================
-    // STATISTICS
-    // ===========================================================
     void calculateJobStats(JobLinkedList& jobs, const ResumeLinkedList& resumes) {
         for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
             int totalMatches = 0;
             double totalScore = 0.0;
+
             for (ResumeNode* res = resumes.getHead(); res != nullptr; res = res->next) {
                 if (res->bestJobId == job->id) {
                     totalMatches++;
                     totalScore += res->bestMatchScore;
                 }
             }
+
             job->totalMatches = totalMatches;
             job->totalScore = totalScore;
             job->averageScore = (totalMatches > 0) ? (totalScore / totalMatches) : 0.0;
@@ -211,13 +214,12 @@ public:
     void performWeightedMatching(ResumeLinkedList& resumes, JobLinkedList& jobs) {
         clock_t start = clock();
 
-        // STEP 1: Preprocess skill flags
         preprocessResumeSkills(resumes);
         preprocessJobSkills(jobs);
 
-        // STEP 2: Match resumes to jobs
+        // STEP 2: Resume-to-job matching
         for (ResumeNode* resume = resumes.getHead(); resume != nullptr; resume = resume->next) {
-            int maxScore = -1;
+            double maxScore = -1.0;
             JobNode* bestJob = nullptr;
 
             for (JobNode* job = jobs.getHead(); job != nullptr; job = job->next) {
@@ -228,22 +230,32 @@ public:
                 }
             }
 
-            if (bestJob) {
-                resume->bestJobDesc = bestJob->description;
-                resume->bestJobId = bestJob->id;
-                resume->bestMatchScore = maxScore;
-            } else {
-                resume->bestJobDesc = "N/A";
-                resume->bestJobId = "N/A";
-                resume->bestMatchScore = 0;
-            }
+                if (bestJob) {
+                    if (strictMode && maxScore < strictThreshold) {
+                        // Below threshold — treat as no valid match
+                        resume->bestJobDesc = "No suitable match";
+                        resume->bestJobId = "N/A";
+                        resume->bestMatchScore = 0;
+                    } else {
+                        // Acceptable match
+                        resume->bestJobDesc = bestJob->description;
+                        resume->bestJobId = bestJob->id;
+                        resume->bestMatchScore = maxScore;
+                    }
+                } else {
+                    resume->bestJobDesc = "N/A";
+                    resume->bestJobId = "N/A";
+                    resume->bestMatchScore = 0;
+                }
+
         }
 
         // STEP 3: Aggregate job stats
         calculateJobStats(jobs, resumes);
 
         double timeTaken = double(clock() - start) / CLOCKS_PER_SEC;
-        cout << "Optimized Weighted Matching completed in " << timeTaken << " seconds.\n";
+        cout << "Balanced Weighted Matching completed in " << timeTaken << " seconds.\n";
     }
 };
+
 #endif

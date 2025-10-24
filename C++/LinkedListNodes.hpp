@@ -131,17 +131,35 @@ public:
         return (current != nullptr) ? current->description : "";
     }
 
+    JobNode* searchById(const string& searchId) const {
+        if (searchId.empty()) return nullptr;
+
+        string digits;
+        for (char c : searchId) if (isdigit(static_cast<unsigned char>(c))) digits.push_back(c);
+
+        string needle;
+        if (!digits.empty()) {
+            int num = stoi(digits);
+            string numstr = to_string(num);
+            while (numstr.length() < 3) numstr = "0" + numstr;
+            needle = "J" + numstr;
+        } else {
+            needle = searchId;
+        }
+
+        for (JobNode* current = head; current != nullptr; current = current->next) {
+            if (current->id == needle) return current;
+        }
+        return nullptr;
+    }
+
     void displayTop10ByScore() const {
         if (size == 0) return;
-        
-        // Use dynamic allocation based on actual size
+       
         JobNode** jobArray = new JobNode*[size];
         int count = 0;
-
         for (JobNode* job = head; job != nullptr; job = job->next)
             jobArray[count++] = job;
-
-        // Selection Sort by averageScore (descending)
         for (int i = 0; i < count - 1; i++) {
             int maxIdx = i;
             for (int j = i + 1; j < count; j++) {
@@ -154,7 +172,6 @@ public:
                 jobArray[maxIdx] = temp;
             }
         }
-
         cout << "\nTop 10 Jobs by Average Match Score\n";
         cout << "--------------------------------------------\n";
         int limit = (count < 10) ? count : 10;
@@ -164,8 +181,72 @@ public:
                  << " | Matches: " << jobArray[i]->totalMatches << "\n";
         }
         cout << "--------------------------------------------\n";
+       
+        delete[] jobArray;
+    }
+
+    void displayTop10ByMatches() const {
+        if (size == 0) return;
+        
+        JobNode** jobArray = new JobNode*[size];
+        int count = 0;
+        for (JobNode* job = head; job != nullptr; job = job->next)
+            jobArray[count++] = job;
+        
+        // Selection Sort by totalMatches (descending), then by totalScore (descending)
+        for (int i = 0; i < count - 1; i++) {
+            int maxIdx = i;
+            for (int j = i + 1; j < count; j++) {
+                // Primary: more matches wins
+                if (jobArray[j]->totalMatches > jobArray[maxIdx]->totalMatches) {
+                    maxIdx = j;
+                }
+                // Tiebreaker: if same matches, higher total score wins
+                else if (jobArray[j]->totalMatches == jobArray[maxIdx]->totalMatches &&
+                        jobArray[j]->totalScore > jobArray[maxIdx]->totalScore) {
+                    maxIdx = j;
+                }
+            }
+            if (maxIdx != i) {
+                JobNode* temp = jobArray[i];
+                jobArray[i] = jobArray[maxIdx];
+                jobArray[maxIdx] = temp;
+            }
+        }
+        
+        cout << "\nTop 10 Jobs by Total Matches (with Total Score)\n";
+        cout << "------------------------------------------------------------\n";
+        int limit = (count < 10) ? count : 10;
+        for (int i = 0; i < limit; i++) {
+            cout << i + 1 << ". " << jobArray[i]->id
+                << " | Matches: " << jobArray[i]->totalMatches
+                << " | Total Score: " << jobArray[i]->totalScore
+                << " | Avg Score: " << jobArray[i]->averageScore << "\n";
+        }
+        cout << "------------------------------------------------------------\n";
         
         delete[] jobArray;
+    }
+
+    size_t getTotalMemoryUsage() const {
+        size_t totalMemory = 0;
+        JobNode* current = head;
+
+        while (current != nullptr) {
+            // sizeof(JobNode) already includes fixed arrays and the std::string objects
+            totalMemory += sizeof(JobNode);
+
+            // Add dynamic string buffers (approximate). capacity() is in chars (1 byte each).
+            totalMemory += current->id.capacity();
+            totalMemory += current->description.capacity();
+
+            current = current->next;
+        }
+
+        // Add the linked-list object overhead once
+        totalMemory += sizeof(*this);
+
+        return totalMemory;
     }
 };
 
@@ -181,7 +262,7 @@ public:
 
     string bestJobId;
     string bestJobDesc;
-    int bestMatchScore;
+    double bestMatchScore;
 
     ResumeNode(const string& rid, const string& desc, const string& skills)
         : id(rid), description(desc), next(nullptr),
@@ -250,10 +331,40 @@ public:
     }
 
     ResumeNode* searchById(const string& searchId) const {
+        if (searchId.empty()) return nullptr;
+
+        string digits;
+        for (char c : searchId) if (isdigit(static_cast<unsigned char>(c))) digits.push_back(c);
+
+        string needle;
+        if (!digits.empty()) {
+            int num = stoi(digits);
+            string numstr = to_string(num);
+            while (numstr.length() < 3) numstr = "0" + numstr;
+            needle = "R" + numstr;
+        } else {
+            needle = searchId;
+        }
+
         for (ResumeNode* current = head; current != nullptr; current = current->next) {
-            if (current->id == searchId) return current;
+            if (current->id == needle) return current;
         }
         return nullptr;
+    }
+
+    size_t getTotalMemoryUsage() const {
+        size_t totalMemory = 0;
+        ResumeNode* current = head;
+
+        while (current != nullptr) {
+            totalMemory += sizeof(ResumeNode);
+            totalMemory += current->id.capacity();
+            totalMemory += current->description.capacity();
+            current = current->next;
+        }
+
+        totalMemory += sizeof(*this);
+        return totalMemory;
     }
 };
 
