@@ -1,0 +1,42 @@
+# Data Structures in C++
+
+This project contains custom implementations of core data structures written in C++.  
+The goal of this repository is to deepen understanding of internal algorithms, memory
+management, and performance trade-offs behind commonly used structures.
+
+#Features
+This repository includes implementations of:
+
+- **Linked List**
+- **Stack**
+- **Queue**
+- **Binary Search Tree (BST)**
+- **Hash Table** (Chaining or Open Addressing — depending on your implementation)
+- **Graph Structures** (Adjacency List / Matrix)
+- **Sorting Algorithms** (if included)
+
+Each structure is implemented from scratch without relying on STL containers
+(except where explicitly noted), focusing on learning fundamentals.
+
+---
+
+##Objectives
+This project was built with the following goals:
+
+- Strengthen understanding of **C++ memory management**  
+- Learn low-level behavior of **pointers, dynamic allocation, and references**
+- Explore **time and space complexity** of each data structure
+- Demonstrate backend foundations relevant for systems and algorithmic roles
+
+---
+
+# Project Structure
+
+│
+├── LinkedList/ # Singly/Doubly Linked List implementation
+├── Stack/ # Stack using array or linked list
+├── Queue/ # Circular queue or linked-list queue
+├── BinarySearchTree/ # BST insert, search, delete
+├── HashTable/ # Hashing, collisions, resizing
+├── Graph/ # Graph representation and traversal algorithms
+└── main.cpp # Entry point for testing
