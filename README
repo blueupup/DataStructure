@@ -1,42 +1,47 @@
 # Data Structures in C++
 
-This project contains custom implementations of core data structures written in C++.  
-The goal of this repository is to deepen understanding of internal algorithms, memory
-management, and performance trade-offs behind commonly used structures.
+This project contains custom implementations of core data structures written in C++. The goal of this repository is to deepen understanding of internal algorithms, memory management, and performance trade-offs behind commonly used structures.
 
-#Features
-This repository includes implementations of:
+# Features
+- Linked List
+- Stack
+- Queue
+- Binary Search Tree (BST)
+- Hash Table
+- Graph Structures
+- Sorting Algorithms (if included)
 
-- **Linked List**
-- **Stack**
-- **Queue**
-- **Binary Search Tree (BST)**
-- **Hash Table** (Chaining or Open Addressing — depending on your implementation)
-- **Graph Structures** (Adjacency List / Matrix)
-- **Sorting Algorithms** (if included)
-
-Each structure is implemented from scratch without relying on STL containers
-(except where explicitly noted), focusing on learning fundamentals.
-
----
-
-##Objectives
-This project was built with the following goals:
-
-- Strengthen understanding of **C++ memory management**  
-- Learn low-level behavior of **pointers, dynamic allocation, and references**
-- Explore **time and space complexity** of each data structure
-- Demonstrate backend foundations relevant for systems and algorithmic roles
-
----
+# Objectives
+- Strengthen C++ memory management concepts
+- Practice pointer, reference, and dynamic allocation fundamentals
+- Explore time/space complexity
+- Demonstrate backend foundations
 
 # Project Structure
+DataStructure/
+    LinkedList/
+    Stack/
+    Queue/
+    BinarySearchTree/
+    HashTable/
+    Graph/
+    main.cpp
 
-│
-├── LinkedList/ # Singly/Doubly Linked List implementation
-├── Stack/ # Stack using array or linked list
-├── Queue/ # Circular queue or linked-list queue
-├── BinarySearchTree/ # BST insert, search, delete
-├── HashTable/ # Hashing, collisions, resizing
-├── Graph/ # Graph representation and traversal algorithms
-└── main.cpp # Entry point for testing
+# How to Compile & Run
+g++ -std=c++17 -O2 main.cpp -o datastruct  
+./datastruct
+
+# Time Complexity (Overview)
+Linked List Search: O(n)  
+Stack Push/Pop: O(1)  
+Queue Enqueue/Dequeue: O(1)  
+BST Search: O(log n) average, O(n) worst  
+Hash Table Insert: O(1) average  
+Graph BFS/DFS: O(V+E)
+
+# Future Improvements
+- GoogleTest unit tests  
+- AVL/Red-Black Tree  
+- Graph algorithms  
+- Benchmarks  
+- More documentation  
